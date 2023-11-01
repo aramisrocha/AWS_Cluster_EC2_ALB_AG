@@ -63,23 +63,31 @@ resource "aws_security_group" "SG_WEB" {
   }
   }
 
+data "aws_ami" "latest_amazon_linux" {
+  most_recent = true
+  owners = ["amazon"]
 
-  resource "aws_internet_gateway" "Gateway_LAB" {
-  vpc_id = aws_vpc.vpc_LAB.id
-}
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-ebs"]
+  }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.vpc_LAB.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.Gateway_LAB.id
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
-resource "aws_route_table_association" "public_subnet" {
-  count = var.subnet_count
-  subnet_id      = aws_subnet.Subnet_LAB[count.index].id
-  route_table_id = aws_route_table.public.id
-  depends_on     = [aws_internet_gateway.Gateway_LAB]
+
+resource "aws_instance" "EC2_LAB"{
+    ami = data.aws_ami.latest_amazon_linux.name
+    instance_type = "t2.micro"
+    count = "2"
+    associate_public_ip_address = false
+    key_name = "LAB_01"
+    subnet_id = aws_subnet.Subnet_LAB[count.index].id
+    vpc_security_group_ids = [aws_security_group.SG_WEB.id]
+    tags = {
+    Name = "EC2_LAB"
+  }
 }
