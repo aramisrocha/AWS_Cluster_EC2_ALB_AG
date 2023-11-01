@@ -83,17 +83,38 @@ data "aws_ami" "latest_amazon_linux" {
 resource "aws_launch_configuration" "LAB01" {
   name_prefix          = "Template para o LAB01"
   image_id             = data.aws_ami.latest_amazon_linux.id
-  instance_type        = var.instance_type.name
+  instance_type        = var.instance_type
   security_groups      = [aws_security_group.SG_WEB.name]
-  key_name             = [var.instance_key_name.name]
-  user_data            = <<-EOF 
-       #!/bin/bash 
-       sudo su 
-        yum update -y 
-        yum install httpd -y 
-        systemctl start httpd 
-        systemctl enable httpd 
-        echo "<html><h1> Bem vindo ao LAB01 do Aramis você esta no host $(hostname -f)...</p> </h1></html>" >> /var/www/html/index.html 
-        EOF 
-  iam_instance_profile = [aws.aws_iam_role.role_lab01.name]
+  key_name             = var.instance_key_name
+  user_data            = filebase64("ec2_setup.sh")
+  iam_instance_profile = aws_iam_role.role_lab01.name
 }
+
+
+
+# Criando um target Group 
+
+resource "aws_lb_target_group" "TG_lab01" {
+  name        = "TG-lab01"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.vpc_LAB.id
+  target_type = "instance"  
+}
+
+
+
+resource "aws_autoscaling_group" "ASG_LAB01" {
+  name                      = "ASG LAB 01"
+  count = 2
+  launch_configuration       = aws_launch_configuration.LAB01.name
+  min_size                  = 2
+  max_size                  = 4
+  desired_capacity          = 2
+  #vpc_zone_identifier       = [aws_subnet.Subnet_LAB[count.index].id]
+  health_check_type         = "EC2"
+  health_check_grace_period = 300
+  availability_zones        = ["us-east-1a", "us-east-1b"]
+  target_group_arns         = [aws_lb_target_group.TG_lab01.arn]
+}
+

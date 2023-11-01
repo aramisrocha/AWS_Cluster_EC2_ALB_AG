@@ -1,5 +1,5 @@
 resource "aws_iam_role" "role_lab01" {
-  name = "example-role"
+  name = "role_lab01"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
