@@ -79,15 +79,21 @@ data "aws_ami" "latest_amazon_linux" {
 }
 
 
-resource "aws_instance" "EC2_LAB"{
-    ami = data.aws_ami.latest_amazon_linux.name
-    instance_type = "t2.micro"
-    count = "2"
-    associate_public_ip_address = false
-    key_name = "LAB_01"
-    subnet_id = aws_subnet.Subnet_LAB[count.index].id
-    vpc_security_group_ids = [aws_security_group.SG_WEB.id]
-    tags = {
-    Name = "EC2_LAB"
-  }
+# Criando o template das maquinas 
+resource "aws_launch_configuration" "LAB01" {
+  name_prefix          = "Template para o LAB01"
+  image_id             = data.aws_ami.latest_amazon_linux.id
+  instance_type        = var.instance_type.name
+  security_groups      = [aws_security_group.SG_WEB.name]
+  key_name             = [var.instance_key_name.name]
+  user_data            = <<-EOF 
+       #!/bin/bash 
+       sudo su 
+        yum update -y 
+        yum install httpd -y 
+        systemctl start httpd 
+        systemctl enable httpd 
+        echo "<html><h1> Bem vindo ao LAB01 do Aramis você esta no host $(hostname -f)...</p> </h1></html>" >> /var/www/html/index.html 
+        EOF 
+  iam_instance_profile = [aws.aws_iam_role.role_lab01.name]
 }

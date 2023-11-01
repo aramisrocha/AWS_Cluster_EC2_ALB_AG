@@ -12,3 +12,16 @@ variable "subnet_count" {
   type    = number
   default = 2
 }
+
+
+variable "instance_type" {
+  type        = string
+  description = ""
+  default     = "t2.micro"
+}
+
+variable "instance_key_name" {
+  type        = string
+  description = ""
+  default     = "aramis_LAB01"
+}
