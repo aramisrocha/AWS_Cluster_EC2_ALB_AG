@@ -17,7 +17,7 @@ variable "subnet_count" {
 variable "instance_type" {
   type        = string
   description = ""
-  default     = "t2.micro"
+  default     = "t3.micro"
 }
 
 variable "instance_key_name" {

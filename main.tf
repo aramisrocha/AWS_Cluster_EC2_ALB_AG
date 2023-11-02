@@ -1,3 +1,5 @@
+
+# Armazenando o tfstate na nuvem
 terraform {
   backend "s3" {
     bucket = "aramis-aws-terraform-remote-state-dev"
@@ -25,7 +27,7 @@ resource "aws_vpc" "vpc_LAB" {
 
 
 
-
+# Criando duas subredes em zonas de disponibilidade diferentes
 resource "aws_subnet" "Subnet_LAB" {
   count           = var.subnet_count
   vpc_id          = aws_vpc.vpc_LAB.id
@@ -34,8 +36,7 @@ resource "aws_subnet" "Subnet_LAB" {
 }
 
 
-# Adicionando um security group para acesso ao WEB
-
+# Adicionando um security group somente acesso ao WEB
 resource "aws_security_group" "SG_WEB" {
   name        = "SG_ALB"
   description = "Permitit somente acesso a WEB para o ALB"
@@ -63,6 +64,7 @@ resource "aws_security_group" "SG_WEB" {
   }
   }
 
+# Buscando uma AMI na AWS
 data "aws_ami" "latest_amazon_linux" {
   most_recent = true
   owners = ["amazon"]
@@ -101,21 +103,20 @@ resource "aws_route_table_association" "public_subnet" {
   depends_on     = [aws_internet_gateway.Gateway_LAB]
 }
 
-# Criando o template das maquinas 
+# Criando o template das maquinas com o script de instalação do Apache
 resource "aws_launch_configuration" "LAB01" {
   name_prefix          = "Template para o LAB01"
+  associate_public_ip_address = true
   image_id             = data.aws_ami.latest_amazon_linux.id
   instance_type        = var.instance_type
   security_groups      = [aws_security_group.SG_WEB.id]
   key_name             = var.instance_key_name
   user_data            = filebase64("ec2_setup.sh")
-  #iam_instance_profile = aws_iam_role.role_lab01.name
 }
 
 
 
 # Criando um target Group 
-
 resource "aws_lb_target_group" "TG_lab01" {
   name        = "TG-lab01"
   port        = 80
@@ -125,10 +126,9 @@ resource "aws_lb_target_group" "TG_lab01" {
 }
 
 
-
+# Criando o Auto scaling group em zonas de disponibilidade diferentes
 resource "aws_autoscaling_group" "ASG_LAB001" {
   name                      = "ASGLAB001"
-  #count = 2
   launch_configuration       = aws_launch_configuration.LAB01.name
   min_size                  = 2
   max_size                  = 4
@@ -136,7 +136,6 @@ resource "aws_autoscaling_group" "ASG_LAB001" {
   vpc_zone_identifier       = [for subnet in aws_subnet.Subnet_LAB : subnet.id]
   health_check_type         = "EC2"
   health_check_grace_period = 300
- #availability_zones        = ["us-east-2a", "us-east-2b"]
   target_group_arns         = [aws_lb_target_group.TG_lab01.arn]
 }
 
@@ -150,7 +149,7 @@ resource "aws_lb" "ALB_lab01" {
   security_groups    = [aws_security_group.SG_WEB.id]
 }
 
-# Defina os listeners de encaminhamento do ALB (pode haver vários listeners)
+# Defina os listeners de encaminhamento do ALB 
 resource "aws_lb_listener" "http_listener" {
   load_balancer_arn = aws_lb.ALB_lab01.arn
   port              = 80
