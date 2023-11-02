@@ -37,8 +37,8 @@ resource "aws_subnet" "Subnet_LAB" {
 # Adicionando um security group para acesso ao WEB
 
 resource "aws_security_group" "SG_WEB" {
-  name        = "Security group para os servidores WEB"
-  description = "Permitit somente acesso a WEB"
+  name        = "SG_ALB"
+  description = "Permitit somente acesso a WEB para o ALB"
   vpc_id      = aws_vpc.vpc_LAB.id
 
   ingress {
@@ -106,7 +106,7 @@ resource "aws_lb_target_group" "TG_lab01" {
 
 resource "aws_autoscaling_group" "ASG_LAB01" {
   name                      = "ASG LAB 01"
-  count = 2
+  #count = 2
   launch_configuration       = aws_launch_configuration.LAB01.name
   min_size                  = 2
   max_size                  = 4
@@ -118,3 +118,23 @@ resource "aws_autoscaling_group" "ASG_LAB01" {
   target_group_arns         = [aws_lb_target_group.TG_lab01.arn]
 }
 
+
+# Crie um recurso de Application Load Balancer
+resource "aws_lb" "example" {
+  name               = "example-alb"
+  internal           = false
+  load_balancer_type = "application"
+  subnets            = ["subnet-1", "subnet-2"] # Substitua pelos IDs das subnets
+  security_groups    = [aws_security_group.SG_WEB.id]
+}
+
+# Defina os listeners de encaminhamento do ALB (pode haver vários listeners)
+resource "aws_lb_listener" "http_listener" {
+  load_balancer_arn = aws_lb.example.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    target_group_arn = aws_lb_target_group.TG_lab01.arn
+    type             = "forward"
+  }
+}
