@@ -17,24 +17,6 @@ provider "aws" {
 
 
 
-# Criando os recursos de rede
-
-
-resource "aws_vpc" "vpc_LAB" {
-    cidr_block =  var.network_cidr
-    enable_dns_hostnames = true
-}
-
-
-
-# Criando duas subredes em zonas de disponibilidade diferentes
-resource "aws_subnet" "Subnet_LAB" {
-  count           = var.subnet_count
-  vpc_id          = aws_vpc.vpc_LAB.id
-  cidr_block      = cidrsubnet(var.network_cidr, 8, count.index)
-  availability_zone = element(["us-east-2a", "us-east-2b"], count.index % 2)
-}
-
 
 # Adicionando um security group somente acesso ao WEB
 resource "aws_security_group" "SG_WEB" {
@@ -64,6 +46,34 @@ resource "aws_security_group" "SG_WEB" {
   }
   }
 
+resource "aws_security_group" "SG_EC2" {
+  name        = "SG_EC2"
+  description = "Permitit somente requisições vindas do ALB para EC2"
+  vpc_id      = aws_vpc.vpc_LAB.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    security_groups = [aws_security_group.SG_WEB.id]
+  }
+ 
+   ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = [aws_security_group.SG_WEB.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  }
+
+
 # Buscando uma AMI na AWS
 data "aws_ami" "latest_amazon_linux" {
   most_recent = true
@@ -80,11 +90,24 @@ data "aws_ami" "latest_amazon_linux" {
   }
 }
 
+# Criando os recursos de rede
+
+#Criando VPC
+resource "aws_vpc" "vpc_LAB" {
+    cidr_block =  var.network_cidr
+    enable_dns_hostnames = true
+}
+# Criando duas subredes em zonas de disponibilidade diferentes
+resource "aws_subnet" "Subnet_LAB" {
+  count           = var.subnet_count
+  vpc_id          = aws_vpc.vpc_LAB.id
+  cidr_block      = cidrsubnet(var.network_cidr, 8, count.index)
+  availability_zone = element(["us-east-2a", "us-east-2b"], count.index % 2)
+}
 #Adicionando internet gateway
   resource "aws_internet_gateway" "Gateway_LAB" {
   vpc_id = aws_vpc.vpc_LAB.id
 }
-
 # Criando uma Tabela de rotas ja associando o internet gateway
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.vpc_LAB.id
@@ -94,7 +117,6 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.Gateway_LAB.id
   }
 }
-
 #Associando a tabela de rotas as duas subnets e definindo a criação do IG como depenencia
 resource "aws_route_table_association" "public_subnet" {
   count = length(aws_subnet.Subnet_LAB)
@@ -103,28 +125,25 @@ resource "aws_route_table_association" "public_subnet" {
   depends_on     = [aws_internet_gateway.Gateway_LAB]
 }
 
+
+
+
+
+
+
+# Recursos template paras as maquians EC2 e o  Auto scaling Group
+
+
 # Criando o template das maquinas com o script de instalação do Apache
 resource "aws_launch_configuration" "LAB01" {
   name_prefix          = "Template para o LAB01"
   associate_public_ip_address = true
   image_id             = data.aws_ami.latest_amazon_linux.id
   instance_type        = var.instance_type
-  security_groups      = [aws_security_group.SG_WEB.id]
+  security_groups      = [aws_security_group.SG_EC2.id]
   key_name             = var.instance_key_name
   user_data            = filebase64("ec2_setup.sh")
 }
-
-
-
-# Criando um target Group 
-resource "aws_lb_target_group" "TG_lab01" {
-  name        = "TG-lab01"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.vpc_LAB.id
-  target_type = "instance"  
-}
-
 
 # Criando o Auto scaling group em zonas de disponibilidade diferentes
 resource "aws_autoscaling_group" "ASG_LAB001" {
@@ -139,6 +158,8 @@ resource "aws_autoscaling_group" "ASG_LAB001" {
   target_group_arns         = [aws_lb_target_group.TG_lab01.arn]
 }
 
+
+# Recursos no Load Balance
 
 # Crie um recurso de Application Load Balancer
 resource "aws_lb" "ALB_lab01" {
@@ -158,4 +179,14 @@ resource "aws_lb_listener" "http_listener" {
     target_group_arn = aws_lb_target_group.TG_lab01.arn
     type             = "forward"
   }
+}
+
+
+# Criando um target Group 
+resource "aws_lb_target_group" "TG_lab01" {
+  name        = "TG-lab01"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.vpc_LAB.id
+  target_type = "instance"  
 }
