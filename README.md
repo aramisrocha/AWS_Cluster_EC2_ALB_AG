@@ -36,10 +36,14 @@ Security Group para as Instâncias EC2:
 
 ## Evidências de Funcionamento
 
+Funcionamento do site em um host EC2
 ![Funcionamento do site em um host EC2](./imagens/Evidencia01.JPG)
 
+Funcionamento do site em outro host EC2
 ![Funcionamento do site em outro host EC2](./imagens/Evidencia02.JPG)
 
+Todos os recursos criados
 ![Todos os recursos criados](./imagens/Evidencia03.JPG)
 
+Instancias em Auta disponibilidade
 ![Instancias em Auta disponibilidade](./imagens/Evidencia04.JPG)
