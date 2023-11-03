@@ -43,6 +43,7 @@ Funcionamento do site em outro host EC2
 ![Funcionamento do site em outro host EC2](./imagens/Evidencia02.JPG)
 
 Todos os recursos criados
+
 ![Todos os recursos criados](./imagens/Evidencia03.JPG)
 
 Instancias em Auta disponibilidade
