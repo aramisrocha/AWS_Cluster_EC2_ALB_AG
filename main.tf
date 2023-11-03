@@ -47,8 +47,8 @@ resource "aws_security_group" "SG_WEB" {
   }
 
 resource "aws_security_group" "SG_EC2" {
-  name        = "SG_EC2"
-  description = "Permitit somente requisições vindas do ALB para EC2"
+  name        = "SGEC2"
+  description = "Permitir somente requisicao somente do ALB para EC2"
   vpc_id      = aws_vpc.vpc_LAB.id
 
   ingress {

@@ -41,3 +41,5 @@ Security Group para as Instâncias EC2:
 ![Evidência 2](./imagens/Evidencia02.JPG)
 
 ![Evidência 3](./imagens/Evidencia03.JPG)
+
+![Evidência 4](./imagens/Evidencia04.JPG)
